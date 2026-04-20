@@ -79,6 +79,8 @@ Multi-agent host with an orchestrator that classifies intent and dispatches to s
 |--------|------|-------------|
 | `POST` | `/agent` | Orchestrator endpoint — classifies intent and routes to agents (SSE) |
 | `POST` | `/agent/{id}` | Direct agent endpoint — invoke a specific agent by ID (SSE) |
+| `POST` | `/agent/file` | Orchestrator endpoint — read a local IaC file by path and analyze it (SSE) |
+| `POST` | `/agent/{id}/file` | Direct agent endpoint — read a local IaC file by path for one agent (SSE) |
 | `GET`  | `/agents` | List all registered agents (JSON) |
 | `GET`  | `/health` | Health check — returns status, version, environment, agent count |
 

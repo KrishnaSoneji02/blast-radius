@@ -141,3 +141,39 @@ func TestParseAndEnrich_UsesPromptFirst(t *testing.T) {
 		t.Error("expected code from prompt field, not messages")
 	}
 }
+
+func TestParseAndEnrich_TerraformState(t *testing.T) {
+	state := `{
+	  "version": 4,
+	  "terraform_version": "1.5.7",
+	  "resources": [
+	    {
+	      "mode": "managed",
+	      "type": "azurerm_virtual_network",
+	      "name": "hub",
+	      "instances": [
+	        {"attributes": {"name": "vnet-hub"}}
+	      ]
+	    }
+	  ]
+	}`
+	req := protocol.AgentRequest{
+		Messages: []protocol.Message{
+			{Role: "user", Content: "analyze deployed state:\n```json\n" + state + "\n```"},
+		},
+	}
+
+	ParseAndEnrich(&req)
+	if req.IaC == nil {
+		t.Fatal("expected IaC to be populated from tfstate")
+	}
+	if req.IaC.Format != protocol.FormatTerraform {
+		t.Errorf("format = %s, want terraform", req.IaC.Format)
+	}
+	if len(req.IaC.Resources) != 1 {
+		t.Fatalf("expected 1 resource, got %d", len(req.IaC.Resources))
+	}
+	if req.IaC.Resources[0].Type != "azurerm_virtual_network" {
+		t.Errorf("resource type = %s", req.IaC.Resources[0].Type)
+	}
+}

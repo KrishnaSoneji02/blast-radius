@@ -82,14 +82,17 @@ func (d *Dispatcher) Dispatch(ctx context.Context, agentID string, req protocol.
 // ParseAndEnrich extracts IaC code from the request, detects the format,
 // parses resources, and populates req.IaC.
 func ParseAndEnrich(req *protocol.AgentRequest) {
-	raw := req.Prompt
-	if raw == "" {
-		for i := len(req.Messages) - 1; i >= 0; i-- {
-			if req.Messages[i].Role == "user" && req.Messages[i].Content != "" {
-				raw = req.Messages[i].Content
-				break
-			}
+	// First try to get content from messages (preferred - may have IaC code blocks)
+	raw := ""
+	for i := len(req.Messages) - 1; i >= 0; i-- {
+		if req.Messages[i].Role == "user" && req.Messages[i].Content != "" {
+			raw = req.Messages[i].Content
+			break
 		}
+	}
+	// Fallback to Prompt if no messages
+	if raw == "" && req.Prompt != "" {
+		raw = req.Prompt
 	}
 
 	code := parser.ExtractCode(raw)

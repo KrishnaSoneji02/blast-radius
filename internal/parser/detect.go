@@ -17,6 +17,10 @@ var (
 		regexp.MustCompile(`module\s+"[^"]+"\s*\{`),
 		regexp.MustCompile(`data\s+"[^"]+"\s+"[^"]+"\s*\{`),
 	}
+	tfStateDetectPatterns = []*regexp.Regexp{
+		regexp.MustCompile(`"terraform_version"\s*:\s*"[^"]+"`),
+		regexp.MustCompile(`"resources"\s*:\s*\[`),
+	}
 	bicepDetectPatterns = []*regexp.Regexp{
 		regexp.MustCompile(`resource\s+\w+\s+'[^']+'\s*=\s*\{`),
 		regexp.MustCompile(`param\s+\w+\s+\w+`),
@@ -33,6 +37,16 @@ func DetectIaCType(code string) IaCType {
 		if re.MatchString(code) {
 			return Terraform
 		}
+	}
+	allMatched := true
+	for _, re := range tfStateDetectPatterns {
+		if !re.MatchString(code) {
+			allMatched = false
+			break
+		}
+	}
+	if allMatched {
+		return Terraform
 	}
 	for _, re := range bicepDetectPatterns {
 		if re.MatchString(code) {
@@ -83,12 +97,19 @@ func ParseResources(code string) []protocol.Resource {
 func ParseResourcesOfType(code string, iacType IaCType) []protocol.Resource {
 	switch iacType {
 	case Terraform:
-		return ParseTerraform(code)
+		resources := ParseTerraform(code)
+		if len(resources) == 0 {
+			resources = ParseTerraformState(code)
+		}
+		return resources
 	case Bicep:
 		return ParseBicep(code)
 	default:
 		// Try both
 		resources := ParseTerraform(code)
+		if len(resources) == 0 {
+			resources = ParseTerraformState(code)
+		}
 		if len(resources) == 0 {
 			resources = ParseBicep(code)
 		}

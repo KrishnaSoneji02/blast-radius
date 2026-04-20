@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/ghcp-iac/ghcp-iac-workflow/internal/protocol"
 )
@@ -29,6 +30,40 @@ func NewSSEWriter(w http.ResponseWriter) *SSEWriter {
 	w.Header().Set("X-Accel-Buffering", "no")
 
 	return &SSEWriter{w: w, flusher: flusher}
+}
+
+// BufferEmitter collects all output in a buffer for plain text/markdown response.
+type BufferEmitter struct {
+	buf strings.Builder
+}
+
+// NewBufferEmitter creates a new buffer-based emitter.
+func NewBufferEmitter() *BufferEmitter {
+	return &BufferEmitter{}
+}
+
+// SendMessage appends content to the buffer.
+func (b *BufferEmitter) SendMessage(content string) {
+	b.buf.WriteString(content)
+}
+
+// SendReferences is a no-op for buffer mode.
+func (b *BufferEmitter) SendReferences(refs []protocol.Reference) {}
+
+// SendConfirmation is a no-op for buffer mode.
+func (b *BufferEmitter) SendConfirmation(conf protocol.Confirmation) {}
+
+// SendError appends an error message to the buffer.
+func (b *BufferEmitter) SendError(msg string) {
+	b.buf.WriteString(fmt.Sprintf("❌ **Error:** %s\n", msg))
+}
+
+// SendDone is a no-op for buffer mode.
+func (b *BufferEmitter) SendDone() {}
+
+// String returns the collected content.
+func (b *BufferEmitter) String() string {
+	return b.buf.String()
 }
 
 // SendMessage sends a copilot_message event with content.

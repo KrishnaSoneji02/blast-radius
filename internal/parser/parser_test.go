@@ -47,6 +47,26 @@ func TestDetectIaCType_Bicep(t *testing.T) {
 	}
 }
 
+func TestDetectIaCType_TerraformState(t *testing.T) {
+	state := `{
+	  "terraform_version": "1.5.7",
+	  "resources": [
+	    {
+	      "mode": "managed",
+	      "type": "azurerm_virtual_network",
+	      "name": "hub",
+	      "instances": [
+	        {"attributes": {"name": "vnet-hub"}}
+	      ]
+	    }
+	  ]
+	}`
+	got := DetectIaCType(state)
+	if got != Terraform {
+		t.Errorf("DetectIaCType(tfstate) = %v, want Terraform", got)
+	}
+}
+
 func TestDetectIaCType_Unknown(t *testing.T) {
 	tests := []string{
 		"hello world",
@@ -163,7 +183,6 @@ func TestParseTerraform_MultipleResources(t *testing.T) {
   name     = "test-rg"
   location = "eastus"
 }
-
 resource "azurerm_storage_account" "sa" {
   name = "testsa"
 }`
@@ -176,6 +195,50 @@ resource "azurerm_storage_account" "sa" {
 	}
 	if resources[1].Type != "azurerm_storage_account" {
 		t.Errorf("second resource Type = %q", resources[1].Type)
+	}
+}
+
+func TestParseTerraformState_ManagedResources(t *testing.T) {
+	state := `{
+	  "version": 4,
+	  "terraform_version": "1.5.7",
+	  "resources": [
+	    {
+	      "mode": "managed",
+	      "type": "azurerm_virtual_network",
+	      "name": "hub",
+	      "instances": [
+	        {
+	          "attributes": {
+	            "name": "vnet-hub",
+	            "location": "westeurope"
+	          }
+	        }
+	      ]
+	    },
+	    {
+	      "mode": "data",
+	      "type": "azurerm_resource_group",
+	      "name": "rg",
+	      "instances": [
+	        {"attributes": {"name": "rg-test"}}
+	      ]
+	    }
+	  ]
+	}`
+
+	resources := ParseTerraformState(state)
+	if len(resources) != 1 {
+		t.Fatalf("expected 1 managed resource, got %d", len(resources))
+	}
+	if resources[0].Type != "azurerm_virtual_network" {
+		t.Errorf("Type = %q, want azurerm_virtual_network", resources[0].Type)
+	}
+	if resources[0].Name != "hub" {
+		t.Errorf("Name = %q, want hub", resources[0].Name)
+	}
+	if v, ok := resources[0].Properties["name"]; !ok || v != "vnet-hub" {
+		t.Errorf("Properties[name] = %v, want vnet-hub", v)
 	}
 }
 
