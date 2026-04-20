@@ -23,7 +23,7 @@ Analyze the impact of infrastructure changes in Terraform configurations.
 git clone https://github.com/KrishnaSoneji02/blast-radius.git
 
 # Clone the test infrastructure (provided separately)
-git clone https://github.com/<your-username>/infrastructure.git
+git clone https://github.com/KrishnaSoneji02/test_infrastructure.git
 ```
 
 3. **Build the server**:
